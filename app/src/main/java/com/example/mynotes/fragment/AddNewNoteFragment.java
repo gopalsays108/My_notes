@@ -1,14 +1,18 @@
 package com.example.mynotes.fragment;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,7 +25,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mynotes.adapter.PhotoRecyclerViewAdapter;
 import com.example.mynotes.database.MyDatabase;
 import com.example.mynotes.databinding.FragmentAddNewNoteBinding;
 import com.example.mynotes.model.NotesModel;
@@ -29,6 +37,8 @@ import com.example.mynotes.utils.SharedPreference;
 import com.sangcomz.fishbun.FishBun;
 import com.sangcomz.fishbun.adapter.image.impl.GlideAdapter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,11 +47,15 @@ public class AddNewNoteFragment extends Fragment {
     private String title;
     private String description;
     private Context context;
+    private RecyclerView recyclerView;
+    private PhotoRecyclerViewAdapter adapter;
     private MyDatabase myDatabase;
     private final ExecutorService service = Executors.newSingleThreadExecutor();
     private Toast myToast;
     private int totalNumberOfPhoto = 10;
-
+    private ArrayList<Parcelable> parcelableArrayListExtra;
+    private final String TAG = AddNewNoteFragment.class.getSimpleName();
+    List<Uri> list;
 
     public AddNewNoteFragment() {
         // Required empty public constructor
@@ -63,6 +77,8 @@ public class AddNewNoteFragment extends Fragment {
         binding = FragmentAddNewNoteBinding.inflate(inflater, container, false);
         View view = binding.getRoot();
         myToast = Toast.makeText(getContext(), null, Toast.LENGTH_SHORT);
+        list = new ArrayList<>();
+        totalNumberOfPhoto = 10 - list.size();
 
         if (getContext() != null)
             myDatabase = MyDatabase.getInstance(getContext().getApplicationContext());
@@ -74,6 +90,17 @@ public class AddNewNoteFragment extends Fragment {
             }
         });
 
+        recyclerView = binding.imageRv;
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+
+        setUpListeners();
+
+        return view;
+    }
+
+    private void setUpListeners() {
         binding.noteTitle.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -116,12 +143,16 @@ public class AddNewNoteFragment extends Fragment {
         binding.addPhoto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (checkCameraPermission())
-                    addPhoto();
-                else requestCameraPermission();
+                if (checkCameraPermission()) {
+                    if (totalNumberOfPhoto != 0)
+                        addPhoto();
+                    else
+                        Toast.makeText(context, "Only 10 photos are allowed per notes", Toast.LENGTH_SHORT).show();
+                } else {
+                    requestCameraPermission();
+                }
             }
         });
-        return view;
     }
 
     private void requestCameraPermission() {
@@ -170,12 +201,33 @@ public class AddNewNoteFragment extends Fragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FishBun.FISHBUN_REQUEST_CODE) {
+            if (resultCode == Activity.RESULT_OK) {
+                if (data != null)
+                    parcelableArrayListExtra = data.getParcelableArrayListExtra(FishBun.INTENT_PATH);
+                setImage();
+            }
+        }
+    }
+
+    private void setImage() {
+        if (parcelableArrayListExtra != null && parcelableArrayListExtra.size() > 0) {
+            for (Parcelable pr : parcelableArrayListExtra) {
+                list.add(Uri.parse(pr.toString()));
+                Log.i(TAG, "setImage: list" + list);
+
+            }
+            totalNumberOfPhoto = totalNumberOfPhoto - list.size();
+            adapter = new PhotoRecyclerViewAdapter(list);
+            recyclerView.setAdapter(adapter);
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private void addPhoto() {
         FishBun.with(AddNewNoteFragment.this)
                 .setImageAdapter(new GlideAdapter())
-                .setMaxCount(10)
+                .setMaxCount(totalNumberOfPhoto)
                 .setActionBarColor(Color.parseColor("#FB503A"),
                         Color.parseColor("#F6412B"), false)
                 .setActionBarTitleColor(Color.parseColor("#ffffff"))
@@ -186,8 +238,6 @@ public class AddNewNoteFragment extends Fragment {
                 .setCamera(true)
                 .hasCameraInPickerPage(true)
                 .startAlbum();
-
-
     }
 
     private void validateInput() {
