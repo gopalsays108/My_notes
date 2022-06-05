@@ -1,6 +1,11 @@
 package com.example.mynotes.fragment;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -9,13 +14,20 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.mynotes.database.MyDatabase;
 import com.example.mynotes.databinding.FragmentAddNewNoteBinding;
 import com.example.mynotes.model.NotesModel;
 import com.example.mynotes.utils.SharedPreference;
+import com.sangcomz.fishbun.FishBun;
+import com.sangcomz.fishbun.adapter.image.impl.GlideAdapter;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -100,17 +112,81 @@ public class AddNewNoteFragment extends Fragment {
 
             }
         });
-        
+
         binding.addPhoto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                addPhoto();
+                if (checkCameraPermission())
+                    addPhoto();
+                else requestCameraPermission();
             }
         });
         return view;
     }
 
+    private void requestCameraPermission() {
+        String[] arr = new String[]{Manifest.permission.CAMERA};
+        requestPermissionLauncher.launch(arr[0]);
+    }
+
+    private boolean checkCameraPermission() {
+        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted
+            return false;
+        }
+        return true;
+    }
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+        if (isGranted) {
+            addPhoto();
+        } else {
+            Toast.makeText(getActivity(), "Permission Denied", Toast.LENGTH_SHORT).show();
+            if (getActivity() != null)
+                if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    showMessageOKCancel(
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    requestCameraPermission();
+                                }
+                            });
+                }
+        }
+    });
+
+    private void showMessageOKCancel(DialogInterface.OnClickListener okListener) {
+        if (getActivity() != null)
+            new AlertDialog.Builder(getActivity())
+                    .setMessage("You need to allow camera permission")
+                    .setPositiveButton("OK", okListener)
+                    .setNegativeButton("Cancel", null)
+                    .create()
+                    .show();
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
     private void addPhoto() {
+        FishBun.with(AddNewNoteFragment.this)
+                .setImageAdapter(new GlideAdapter())
+                .setMaxCount(10)
+                .setActionBarColor(Color.parseColor("#FB503A"),
+                        Color.parseColor("#F6412B"), false)
+                .setActionBarTitleColor(Color.parseColor("#ffffff"))
+                .textOnNothingSelected("Nothing Selected")
+                .textOnImagesSelectionLimitReached("Limit Reached!")
+                .setActionBarTitle("Select Images")
+                .setAllViewTitle("All")
+                .setCamera(true)
+                .hasCameraInPickerPage(true)
+                .startAlbum();
+
 
     }
 
