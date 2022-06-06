@@ -1,8 +1,13 @@
 package com.example.mynotes.fragment;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -10,17 +15,11 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-
-import com.example.mynotes.R;
+import com.example.mynotes.activity.ImageFullScreenActivity;
 import com.example.mynotes.adapter.PhotoRecyclerViewAdapter;
 import com.example.mynotes.database.MyDatabase;
-import com.example.mynotes.databinding.FragmentAddNewNoteBinding;
 import com.example.mynotes.databinding.FragmentNoteDetailBinding;
-import com.example.mynotes.model.ImageModel;
+import com.example.mynotes.interfaces.RecyclerViewFullImageInterface;
 import com.example.mynotes.model.NotesModel;
 import com.example.mynotes.utils.SharedPreference;
 
@@ -34,7 +33,7 @@ import java.util.concurrent.Executors;
  * Use the {@link NoteDetailFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class NoteDetailFragment extends Fragment {
+public class NoteDetailFragment extends Fragment implements RecyclerViewFullImageInterface {
 
     private static final String ARG_PARAM1 = "param1";
     private NotesModel notesModel;
@@ -45,6 +44,7 @@ public class NoteDetailFragment extends Fragment {
     private List<Uri> imageUri;
     private Context context;
     private static final String TAG = NoteDetailFragment.class.getSimpleName();
+    private  List<Uri> imageUrisList;
 
     public NoteDetailFragment() {
         // Required empty public constructor
@@ -102,15 +102,15 @@ public class NoteDetailFragment extends Fragment {
             public void run() {
                 try {
                     List<String> allImage = myDatabase.getImageDao().getAllImage(email, id);
-                    List<Uri> im = new ArrayList<>();
+                    imageUrisList = new ArrayList<>();
 
                     if (getActivity() != null)
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 for (String u : allImage){
-                                    im.add(Uri.parse(u));
-                                    loadImageIntoRecyclerView(im);
+                                    imageUrisList.add(Uri.parse(u));
+                                    loadImageIntoRecyclerView(imageUrisList);
                                 }
                             }
                         });
@@ -124,7 +124,7 @@ public class NoteDetailFragment extends Fragment {
     private void loadImageIntoRecyclerView(List<Uri> allImage) {
         if (!allImage.isEmpty()) {
             binding.relativeLayout2.setVisibility(View.VISIBLE);
-            adapter = new PhotoRecyclerViewAdapter(allImage);
+            adapter = new PhotoRecyclerViewAdapter(allImage,this);
             recyclerView.setAdapter(adapter);
             adapter.notifyDataSetChanged();
         } else {
@@ -142,5 +142,12 @@ public class NoteDetailFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         this.context = null;
+    }
+
+    @Override
+    public void onItemClick(int position) {
+        Intent intent = new Intent(getActivity(), ImageFullScreenActivity.class);
+        intent.putExtra("image_uri", imageUrisList.get(position).toString());
+        startActivity(intent);
     }
 }

@@ -28,10 +28,10 @@
         android:id="@+id/logout"
         android:layout_width="45dp"
         android:layout_height="45dp"
-        android:padding="10dp"
         android:layout_marginTop="4dp"
         android:layout_marginEnd="12dp"
         android:elevation="35dp"
+        android:padding="10dp"
         android:src="@drawable/ic_logout1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

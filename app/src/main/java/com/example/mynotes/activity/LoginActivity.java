@@ -12,6 +12,7 @@ import com.example.mynotes.database.MyDatabase;
 import com.example.mynotes.databinding.ActivityLoginBinding;
 import com.example.mynotes.utils.PasswordHash;
 import com.example.mynotes.utils.SharedPreference;
+import com.example.mynotes.utils.Validators;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
@@ -48,6 +49,7 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    @SuppressWarnings("ConstantConditions")
     private void verifyInputs() {
         email = binding.emailId.getText().toString().trim();
         password = binding.password.getText().toString().trim();
@@ -55,6 +57,8 @@ public class LoginActivity extends AppCompatActivity {
         if (email.isEmpty()) {
             binding.emailId.setError("Please enter email id");
             binding.emailId.requestFocus();
+        } else if (!Validators.validateEmailId(email)) {
+            Toast.makeText(this, "Invalid email", Toast.LENGTH_SHORT).show();
         } else if (password.isEmpty()) {
             binding.password.setError("Please enter password");
             binding.password.requestFocus();

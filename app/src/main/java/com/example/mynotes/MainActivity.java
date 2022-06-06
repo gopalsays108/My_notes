@@ -67,9 +67,11 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewInter
         listRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         listRecyclerView.setItemAnimator(new DefaultItemAnimator());
 
-        setToolbarTitle(name);
-
-
+        int index = name.indexOf(" ");
+        if (index < 0)
+            setToolbarTitle(name);
+        else
+            setToolbarTitle(name.substring(0, index));
         setListeners();
     }
 
@@ -168,6 +170,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewInter
                 }
             }
         });
+
     }
 
     void updateUI(List<NotesModel> notesModels, List<ImageModel> imageModel) {

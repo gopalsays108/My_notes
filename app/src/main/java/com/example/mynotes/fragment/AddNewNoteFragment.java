@@ -29,9 +29,11 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mynotes.activity.ImageFullScreenActivity;
 import com.example.mynotes.adapter.PhotoRecyclerViewAdapter;
 import com.example.mynotes.database.MyDatabase;
 import com.example.mynotes.databinding.FragmentAddNewNoteBinding;
+import com.example.mynotes.interfaces.RecyclerViewFullImageInterface;
 import com.example.mynotes.model.ImageModel;
 import com.example.mynotes.model.NotesModel;
 import com.example.mynotes.utils.SharedPreference;
@@ -44,7 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 //todo image count
-public class AddNewNoteFragment extends Fragment {
+public class AddNewNoteFragment extends Fragment implements RecyclerViewFullImageInterface {
 
     private static final String ARG_PARAM1 = "param1";
 
@@ -149,10 +151,10 @@ public class AddNewNoteFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 if (checkCameraPermission()) {
-                    if (totalNumberOfPhoto != 0)
+                    if (totalNumberOfPhoto > 0)
                         addPhoto();
                     else
-                        Toast.makeText(context, "Only 10 photos are allowed per notes", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Only 10 photos are allowed per note", Toast.LENGTH_SHORT).show();
                 } else {
                     requestCameraPermission();
                 }
@@ -222,8 +224,8 @@ public class AddNewNoteFragment extends Fragment {
             for (Parcelable pr : parcelableArrayListExtra) {
                 list.add(Uri.parse(pr.toString()));
             }
-            totalNumberOfPhoto = totalNumberOfPhoto - list.size();
-            adapter = new PhotoRecyclerViewAdapter(list);
+            totalNumberOfPhoto = totalNumberOfPhoto - parcelableArrayListExtra.size();
+            adapter = new PhotoRecyclerViewAdapter(list,this);
             recyclerView.setAdapter(adapter);
             adapter.notifyDataSetChanged();
         }
@@ -332,5 +334,12 @@ public class AddNewNoteFragment extends Fragment {
         totalNumberOfPhoto = 10;
         binding.noteTitle.setText("");
         binding.noteDescription.setText("");
+    }
+
+    @Override
+    public void onItemClick(int position) {
+        Intent intent = new Intent(getActivity(), ImageFullScreenActivity.class);
+        intent.putExtra("image_uri", list.get(position).toString());
+        startActivity(intent);
     }
 }

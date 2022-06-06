@@ -68,7 +68,7 @@ public class RegisterActivity extends AppCompatActivity {
             binding.emailId.setError("Please enter email id");
             binding.emailId.requestFocus();
         } else if (!Validators.validateEmailId(email)) {
-            Toast.makeText(this, "In valid email", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Invalid email", Toast.LENGTH_SHORT).show();
         } else if (mobile_no.isEmpty()) {
             binding.mobile.setError("Please enter mobile no");
             binding.mobile.requestFocus();
@@ -78,7 +78,6 @@ public class RegisterActivity extends AppCompatActivity {
             binding.password.setError("Please enter password");
             binding.password.requestFocus();
         } else if (Validators.validatePassword(password, name, getApplicationContext())) {
-            Toast.makeText(this, "verified all", Toast.LENGTH_SHORT).show();
             register();
         }
     }
@@ -90,12 +89,16 @@ public class RegisterActivity extends AppCompatActivity {
             public void run() {
                 String hashedPassword = PasswordHash.hashPassword(password,
                         new String(PasswordHash.getNextSalt(), StandardCharsets.UTF_8));
-
                 if (!myDatabase.getDao().isTaken(email)) {
                     myDatabase.getDao().insertUser(new UserModel(name, email, mobile_no, hashedPassword));
                     saveUserToSharedPreferences(name, email);
                 } else {
-                    Toast.makeText(RegisterActivity.this, "User Already exist", Toast.LENGTH_SHORT).show();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(RegisterActivity.this, "User Already exist", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 }
             }
         });
