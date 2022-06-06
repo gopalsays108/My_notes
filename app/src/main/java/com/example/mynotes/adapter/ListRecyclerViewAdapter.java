@@ -43,7 +43,7 @@ public class ListRecyclerViewAdapter extends RecyclerView.Adapter<ListRecyclerVi
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         NotesModel notesModel = notesModelList.get(position);
         ImageModel imageModel = image.get(position);
-        holder.binding.imageView.setImageDrawable(AppCompatResources.getDrawable(context, R.drawable.food));
+        holder.binding.imageView.setImageDrawable(AppCompatResources.getDrawable(context, R.drawable.note_default_img));
         if (notesModel != null) {
             holder.binding.titleTv.setText(notesModel.getTitle());
             holder.binding.description.setText(notesModel.getDescription());

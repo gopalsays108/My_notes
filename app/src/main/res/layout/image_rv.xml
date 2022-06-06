@@ -30,7 +30,7 @@
             android:background="@color/white"
             android:scaleType="centerCrop"
             android:src="@drawable/rounded_corner"
-            tools:src="@drawable/food" />
+            tools:src="@drawable/note_default_img" />
     </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
