@@ -12,7 +12,7 @@ import java.util.List;
 public interface NoteDao {
 
     @Insert
-    void insertNote(NotesModel notesModel);
+    long insertNote(NotesModel notesModel);
 
     @Query("SELECT * FROM notes_table WHERE email=:email")
     List<NotesModel> noteList(String email);

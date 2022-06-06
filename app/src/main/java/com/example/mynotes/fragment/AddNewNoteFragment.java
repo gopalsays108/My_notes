@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.mynotes.adapter.PhotoRecyclerViewAdapter;
 import com.example.mynotes.database.MyDatabase;
 import com.example.mynotes.databinding.FragmentAddNewNoteBinding;
+import com.example.mynotes.model.ImageModel;
 import com.example.mynotes.model.NotesModel;
 import com.example.mynotes.utils.SharedPreference;
 import com.sangcomz.fishbun.FishBun;
@@ -42,7 +43,11 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+//todo image count
 public class AddNewNoteFragment extends Fragment {
+
+    private static final String ARG_PARAM1 = "param1";
+
     private FragmentAddNewNoteBinding binding;
     private String title;
     private String description;
@@ -55,7 +60,9 @@ public class AddNewNoteFragment extends Fragment {
     private int totalNumberOfPhoto = 10;
     private ArrayList<Parcelable> parcelableArrayListExtra;
     private final String TAG = AddNewNoteFragment.class.getSimpleName();
-    List<Uri> list;
+    private List<Uri> list;
+    private long noteId = -1;
+    private String email;
 
     public AddNewNoteFragment() {
         // Required empty public constructor
@@ -78,11 +85,20 @@ public class AddNewNoteFragment extends Fragment {
         View view = binding.getRoot();
         myToast = Toast.makeText(getContext(), null, Toast.LENGTH_SHORT);
         list = new ArrayList<>();
-        totalNumberOfPhoto = 10 - list.size();
-
+        email = SharedPreference.getUserEmail(context);
         if (getContext() != null)
             myDatabase = MyDatabase.getInstance(getContext().getApplicationContext());
 
+        recyclerView = binding.imageRv;
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        binding.relativeLayout2.setVisibility(View.GONE);
+        setUpListeners();
+        return view;
+    }
+
+    private void setUpListeners() {
         binding.saveNoteBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -90,17 +106,6 @@ public class AddNewNoteFragment extends Fragment {
             }
         });
 
-        recyclerView = binding.imageRv;
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.HORIZONTAL, false));
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
-
-        setUpListeners();
-
-        return view;
-    }
-
-    private void setUpListeners() {
         binding.noteTitle.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -169,24 +174,25 @@ public class AddNewNoteFragment extends Fragment {
         return true;
     }
 
-    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-        if (isGranted) {
-            addPhoto();
-        } else {
-            Toast.makeText(getActivity(), "Permission Denied", Toast.LENGTH_SHORT).show();
-            if (getActivity() != null)
-                if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    showMessageOKCancel(
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    requestCameraPermission();
-                                }
-                            });
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    addPhoto();
+                } else {
+                    Toast.makeText(getActivity(), "Permission Denied", Toast.LENGTH_SHORT).show();
+                    if (getActivity() != null)
+                        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
+                                != PackageManager.PERMISSION_GRANTED) {
+                            showMessageOKCancel(
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            requestCameraPermission();
+                                        }
+                                    });
+                        }
                 }
-        }
-    });
+            });
 
     private void showMessageOKCancel(DialogInterface.OnClickListener okListener) {
         if (getActivity() != null)
@@ -211,16 +217,38 @@ public class AddNewNoteFragment extends Fragment {
     }
 
     private void setImage() {
+        binding.relativeLayout2.setVisibility(View.VISIBLE);
         if (parcelableArrayListExtra != null && parcelableArrayListExtra.size() > 0) {
             for (Parcelable pr : parcelableArrayListExtra) {
                 list.add(Uri.parse(pr.toString()));
-                Log.i(TAG, "setImage: list" + list);
-
             }
             totalNumberOfPhoto = totalNumberOfPhoto - list.size();
             adapter = new PhotoRecyclerViewAdapter(list);
             recyclerView.setAdapter(adapter);
             adapter.notifyDataSetChanged();
+        }
+    }
+
+    private void saveImageToDatabase() {
+        try {
+            for (int i = 0; i < list.size(); i++) {
+                ImageModel imageModel = new ImageModel(noteId, email, list.get(i).toString());
+                resetValues();
+                service.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Log.i(TAG, "run: checking" + imageModel);
+                            myDatabase.getImageDao().insert(imageModel);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+            getActivity().onBackPressed();
+        } catch (Exception e) {
+            Log.d(TAG, "saveImageToDatabase: " + e.getLocalizedMessage());
         }
     }
 
@@ -262,7 +290,17 @@ public class AddNewNoteFragment extends Fragment {
             service.execute(new Runnable() {
                 @Override
                 public void run() {
-                    myDatabase.getListDao().insertNote(notesModel);
+                    try {
+                        noteId = myDatabase.getListDao().insertNote(notesModel);
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                saveImageToDatabase();
+                            }
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             });
 
@@ -274,7 +312,6 @@ public class AddNewNoteFragment extends Fragment {
                         myToast.show();
                     }
                 });
-                getActivity().onBackPressed();
             }
         }
     }
@@ -289,5 +326,11 @@ public class AddNewNoteFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         this.context = null;
+    }
+
+    public void resetValues() {
+        totalNumberOfPhoto = 10;
+        binding.noteTitle.setText("");
+        binding.noteDescription.setText("");
     }
 }

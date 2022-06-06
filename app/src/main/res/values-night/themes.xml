@@ -2,9 +2,19 @@
     <!-- Base application theme. -->
     <style name="Theme.MyNotes" parent="Theme.AppCompat.Light.DarkActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryDark">@color/purple_700</item>
-        <item name="colorAccent">@color/teal_200</item>
+        <item name="colorPrimary">@color/bg_orange</item>
+        <item name="colorPrimaryDark">@color/bg_orange_dark_shade</item>
+        <item name="colorAccent">@color/bg_orange</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <style name="Theme.MyNotes.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.MyNotes.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.MyNotes.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
 </resources>

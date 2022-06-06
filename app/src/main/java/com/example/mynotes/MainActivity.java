@@ -2,7 +2,9 @@ package com.example.mynotes;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -17,14 +19,18 @@ import com.example.mynotes.adapter.ListRecyclerViewAdapter;
 import com.example.mynotes.database.MyDatabase;
 import com.example.mynotes.databinding.ActivityMainBinding;
 import com.example.mynotes.fragment.AddNewNoteFragment;
+import com.example.mynotes.fragment.NoteDetailFragment;
+import com.example.mynotes.interfaces.RecyclerViewInterface;
+import com.example.mynotes.model.ImageModel;
 import com.example.mynotes.model.NotesModel;
 import com.example.mynotes.utils.SharedPreference;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements RecyclerViewInterface {
 
     private ActivityMainBinding binding;
     private RecyclerView listRecyclerView;
@@ -34,9 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private FragmentTransaction transaction;
     private MyDatabase myDatabase;
     private final ExecutorService service = Executors.newSingleThreadExecutor();
-
-
     private String name;
+    private List<NotesModel> notesModels;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +68,12 @@ public class MainActivity extends AppCompatActivity {
         listRecyclerView.setItemAnimator(new DefaultItemAnimator());
 
         setToolbarTitle(name);
+
+
+        setListeners();
+    }
+
+    private void setListeners() {
         binding.addNewNoteFabBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -97,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(binding.frameLayout.getId(), fragment);
         transaction.commit();
+        binding.addNewNoteFabBtn.setVisibility(View.INVISIBLE);
 
     }
 
@@ -105,18 +117,18 @@ public class MainActivity extends AppCompatActivity {
                 name.trim(),
                 "'s",
                 "Notes"));
-        ;
     }
 
     @Override
     public void onBackPressed() {
         Fragment fragment = getSupportFragmentManager().findFragmentById(binding.frameLayout.getId());
         if (fragment != null) {
-            getData();
             transaction = getSupportFragmentManager().beginTransaction();
             transaction.remove(fragment);
             transaction.commit();
             setToolbarTitle(name);
+            getData();
+            binding.addNewNoteFabBtn.setVisibility(View.VISIBLE);
         } else
             super.onBackPressed();
     }
@@ -137,22 +149,40 @@ public class MainActivity extends AppCompatActivity {
         service.execute(new Runnable() {
             @Override
             public void run() {
-                String email = SharedPreference.getUserEmail(getApplicationContext());
-                List<NotesModel> notesModels = myDatabase.getListDao().noteList(email);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        updateUI(notesModels);
+                try {
+                    String email = SharedPreference.getUserEmail(getApplicationContext());
+                    notesModels = myDatabase.getListDao().noteList(email);
+                    List<ImageModel> imageModels = new ArrayList<>();
+                    for (int i = 0; i < notesModels.size(); i++) {
+                        long noteId = notesModels.get(i).getId();
+                        imageModels.add(myDatabase.getImageDao().getOneImage(email, noteId));
                     }
-                });
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateUI(notesModels, imageModels);
+                        }
+                    });
+                } catch (NullPointerException e) {
+                    e.getLocalizedMessage();
+                }
             }
         });
-
     }
 
-    void updateUI(List<NotesModel> notesModels) {
-        adapter = new ListRecyclerViewAdapter(notesModels);
+    void updateUI(List<NotesModel> notesModels, List<ImageModel> imageModel) {
+        adapter = new ListRecyclerViewAdapter(notesModels, getApplicationContext(), imageModel, this);
         listRecyclerView.setAdapter(adapter);
         adapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onItemClick(int position) {
+        NotesModel notesModel = notesModels.get(position);
+        transaction = getSupportFragmentManager().beginTransaction();
+        NoteDetailFragment fragment = NoteDetailFragment.newInstance(notesModel);
+        transaction.replace(binding.frameLayout.getId(), fragment);
+        transaction.commit();
+        binding.addNewNoteFabBtn.setVisibility(View.INVISIBLE);
     }
 }

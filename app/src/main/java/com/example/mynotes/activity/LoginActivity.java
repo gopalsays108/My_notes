@@ -14,6 +14,8 @@ import com.example.mynotes.utils.PasswordHash;
 import com.example.mynotes.utils.SharedPreference;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LoginActivity extends AppCompatActivity {
     private ActivityLoginBinding binding;
@@ -21,6 +23,7 @@ public class LoginActivity extends AppCompatActivity {
     private String email;
     private String password;
     private final String TAG = LoginActivity.class.getSimpleName();
+    ExecutorService service = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,17 +64,48 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void signIn() {
-        String hashedPasswordFromDb = myDatabase.getDao().getPassword(email);
-        boolean isVerified = PasswordHash.verifyHashPassword(password, hashedPasswordFromDb,
-                new String(PasswordHash.getNextSalt(), StandardCharsets.UTF_8));
+        service.execute(new Runnable() {
+            @Override
+            public void run() {
+                String hashedPasswordFromDb = myDatabase.getDao().getPassword(email);
+                if (hashedPasswordFromDb != null) {
+                    boolean isVerified = PasswordHash.verifyHashPassword(password, hashedPasswordFromDb,
+                            new String(PasswordHash.getNextSalt(), StandardCharsets.UTF_8));
 
-        if (isVerified) saveDataToDatabase();
-        else Toast.makeText(this, "Login Failed", Toast.LENGTH_SHORT).show();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isVerified) saveDataToDatabase();
+                            else
+                                Toast.makeText(LoginActivity.this, "Wrong password", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(LoginActivity.this, "Email id Not found", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void saveDataToDatabase() {
-        String name = myDatabase.getDao().getName(email);
-        saveUserToSharedPreferences(name, email);
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        service.execute(new Runnable() {
+            @Override
+            public void run() {
+                String name = myDatabase.getDao().getName(email);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        saveUserToSharedPreferences(name, email);
+                    }
+                });
+            }
+        });
     }
 
     private void saveUserToSharedPreferences(String name, String email) {

@@ -2,10 +2,11 @@ package com.example.mynotes.model;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
-import androidx.room.PrimaryKey;
+import androidx.room.PrimaryKey;import java.io.Serializable;
+
 
 @Entity(tableName = "notes_table")
-public class NotesModel {
+public class NotesModel implements Serializable {
     @PrimaryKey(autoGenerate = true)
     int id;
     @NonNull

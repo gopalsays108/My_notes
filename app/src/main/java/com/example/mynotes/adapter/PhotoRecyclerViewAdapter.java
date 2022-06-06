@@ -28,8 +28,9 @@ public class PhotoRecyclerViewAdapter extends RecyclerView.Adapter<PhotoRecycler
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Uri notesModel = location.get(position);
-        holder.binding.photoIv.setImageURI(notesModel);
+        Uri uri = location.get(position);
+        if (uri != null)
+            holder.binding.photoIv.setImageURI(uri);
     }
 
     @Override
